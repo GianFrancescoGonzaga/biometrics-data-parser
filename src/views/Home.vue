@@ -1,109 +1,201 @@
 <template>
-  <div class="about">
-    <h1>Select .dat file</h1>
-    <input type="file" @change="onFileChange" accept=".dat">
-    <br>
-    <br>
-    <textarea v-show="dat" name id cols="100" rows="20" v-model="dat"></textarea>
-  </div>
+	<div class="about">
+		<h1>Select .dat file</h1>
+		<input type="file" @change="onFileChange" accept=".dat">
+		<br>
+		<br>
+		<button v-show="dat" @click="save">Save</button>
+		<br>
+		<textarea v-show="dat" name id cols="100" rows="20" v-model="dat"></textarea>
+	</div>
 </template>
 
 <script>
+import axios from "axios";
+import { setInterval } from "timers";
+
 export default {
-  data: () => ({
-    dat: ""
-  }),
+	data: () => ({
+		dat: ""
+	}),
 
-  computed: {
-    formattedStr() {
-      return this.sortData(this.dat);
-    },
+	computed: {
+		formattedStr() {
+			return this.sortData(this.dat);
+		},
 
-    userIDs() {
-      return this.getUserIDs(this.formattedStr);
-    }
-  },
+		users() {
+			const userIDs = this.getUserIDs(this.formattedStr);
+			return userIDs.map(id => {
+				const dates = this.getUserDates(id);
 
-  methods: {
-    removeArrayDuplicates(arr) {
-      let unique_array = arr.filter(function(elem, index, self) {
-        return index == self.indexOf(elem);
-      });
-      return unique_array;
-    },
+				const dtr = this.generateDtr(id);
 
-    // file upload
-    onFileChange(e) {
-      const files = e.target.files || e.dataTransfer.files;
-      if (!files.length) return;
-      this.createFile(files[0]);
-    },
+				return {
+					id,
+					name: "",
+					dtr
+				};
+			});
+		}
+	},
 
-    // create file from upload
-    createFile(file) {
-      const reader = new FileReader();
+	methods: {
+		save() {
+			let filename = prompt("Enter the name of the file");
 
-      var vm = this;
+			if (filename) {
+				this.users.forEach(el => {
+					setInterval(() => {
+						axios
+							.post("http://localhost:3000/Users", el)
+							.then(res => {
+								console.log(`Saved ${res.data}`);
+							})
+							.catch(err => {
+								throw err;
+							});
+					}, 50);
+				});
 
-      reader.onload = e => {
-        vm.dat = e.target.result;
-      };
+				this.$router.push("/recent");
+			}
+		},
 
-      reader.readAsText(file);
-    },
+		removeArrayDuplicates(arr) {
+			let unique_array = arr.filter(function(elem, index, self) {
+				return index == self.indexOf(elem);
+			});
+			return unique_array;
+		},
 
-    getUserIDs(arr) {
-      if (arr.length === 0) return [];
+		// file upload
+		onFileChange(e) {
+			const files = e.target.files || e.dataTransfer.files;
+			if (!files.length) return;
+			this.createFile(files[0]);
+		},
 
-      let ids = arr.map(x => {
-        return x[0];
-      });
+		// create file from upload
+		createFile(file) {
+			const reader = new FileReader();
 
-      return this.removeArrayDuplicates(ids);
-    },
+			var vm = this;
 
-    // sort data received
-    sortData(data) {
-      if (data === "") return [];
+			reader.onload = e => {
+				vm.dat = e.target.result;
+			};
 
-      let dat = data.split("\n").map(x => {
-        return x.trim().split(" ");
-      });
+			reader.readAsText(file);
+		},
 
-      let newDat = dat.map(x => {
-        let withTabs = x[0] + "\t" + x[1];
+		getUserIDs(arr) {
+			if (arr.length === 0) return [];
 
-        // remove tabs
-        let withoutTabs = withTabs.split("\t");
+			let ids = arr.map(x => {
+				return x[0];
+			});
 
-        return withoutTabs;
-      });
+			return this.removeArrayDuplicates(ids);
+		},
 
-      return newDat;
-    }
-  }
+		getUserDates(id) {
+			let dates = [];
+
+			this.formattedStr.forEach(x => {
+				if (x[0] === id) {
+					dates.push(x[1]);
+				}
+			});
+
+			return dates;
+		},
+
+		generateDtr(id) {
+			const dates = this.getUserDates(id);
+
+			const users = [];
+
+			this.formattedStr.forEach(x => {
+				if (x[0] === id) {
+					users.push(x);
+				}
+			});
+
+			const ins = [];
+
+			dates.forEach(x => {
+				let el = users.filter(y => {
+					return x === y[1];
+				});
+
+				// user must be an object
+				let user = {
+					date: el[0][1],
+					morningIn: el.find(a => a[4] == "0"),
+					morningOut: el.find(a => a[4] == "1"),
+					noonIn: el.find(a => a[4] == "3"),
+					noonOut: el.find(a => a[4] == "2")
+				};
+
+				ins.push(user);
+			});
+
+			return this.removeDuplicatesBy(x => x.date, ins);
+		},
+
+		// sort data received
+		sortData(data) {
+			if (data === "") return [];
+
+			let dat = data.split("\n").map(x => {
+				return x.trim().split(" ");
+			});
+
+			let newDat = dat.map(x => {
+				let withTabs = x[0] + "\t" + x[1];
+
+				// remove tabs
+				let withoutTabs = withTabs.split("\t");
+
+				return withoutTabs;
+			});
+
+			return newDat;
+		},
+
+		removeDuplicatesBy(keyFn, array) {
+			var mySet = new Set();
+			return array.filter(function(x) {
+				var key = keyFn(x),
+					isNew = !mySet.has(key);
+				if (isNew) mySet.add(key);
+				return isNew;
+			});
+		}
+	}
 };
 </script>
 
 <style>
 body {
-  background: #f0f0f0;
+	background: #f0f0f0;
 }
 
 textarea {
-  margin-top: 10px;
-  margin-left: 50px;
-  background: none repeat scroll 0 0 #000;
-  border-color: -moz-use-text-color #ffffff #ffffff -moz-use-text-color;
-  border-radius: 6px 6px 6px 6px;
-  border-style: none solid solid none;
-  border-width: medium 1px 1px medium;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) inset;
-  color: #18e40f;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 1em;
-  line-height: 1.4em;
-  padding: 5px 8px;
-  /* transition: background-color 0.2s ease 0s; */
+	margin-top: 10px;
+	margin-left: 50px;
+	background: none repeat scroll 0 0 #000;
+	border-color: -moz-use-text-color #ffffff #ffffff -moz-use-text-color;
+	border-radius: 6px 6px 6px 6px;
+	border-style: none solid solid none;
+	border-width: medium 1px 1px medium;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) inset;
+	color: #18e40f;
+	font-family: "Courier New", Courier, monospace;
+	font-size: 1em;
+	line-height: 1.4em;
+	padding: 5px 8px;
+	/* transition: background-color 0.2s ease 0s; */
 }
 </style>
