@@ -1,10 +1,13 @@
 <template>
 	<div class="about">
 		<h1>Select .dat file</h1>
-		<input type="file" @change="onFileChange" accept=".dat">
 		<br>
+		<label v-if="!dat" for="upload" class="upload_label">Upload File</label>
+		<input v-show="false" id="upload" type="file" @change="onFileChange" accept=".dat">
 		<br>
-		<button v-show="dat" @click="save">Save</button>
+		<button class="success" v-show="dat" @click="save">Save</button>
+		<button class="warning" v-show="dat" @click="refresh">Upload File Again</button>
+		<br>
 		<br>
 		<textarea v-show="dat" name id cols="100" rows="20" v-model="dat"></textarea>
 	</div>
@@ -26,13 +29,15 @@ export default {
 
 		users() {
 			const userIDs = this.getUserIDs(this.formattedStr);
-			return userIDs.map(id => {
-				const dates = this.getUserDates(id);
+			return userIDs.map(userID => {
+				// const dates = this.removeArrayDuplicates(
+				// 	this.getUserDates(userID)
+				// );
 
-				const dtr = this.generateDtr(id);
+				const dtr = this.generateDtr(userID);
 
 				return {
-					id,
+					userID,
 					name: "",
 					dtr
 				};
@@ -41,22 +46,31 @@ export default {
 	},
 
 	methods: {
+		refresh() {
+			location.reload();
+		},
+
 		save() {
 			let filename = prompt("Enter the name of the file");
 
 			if (filename) {
-				this.users.forEach(el => {
-					setInterval(() => {
-						axios
-							.post("http://localhost:3000/Users", el)
-							.then(res => {
-								console.log(`Saved ${res.data}`);
-							})
-							.catch(err => {
-								throw err;
-							});
-					}, 50);
-				});
+				axios
+					.post("http://localhost:3000/Users", {
+						id: Math.random()
+							.toString(16)
+							.slice(2),
+						saveName: filename,
+						data: this.users
+					})
+					.then(res => {
+						this.$parent.$emit(
+							"Snackbar",
+							`Saved '${res.data.saveName}'`
+						);
+					})
+					.catch(err => {
+						throw err;
+					});
 
 				this.$router.push("/recent");
 			}
@@ -130,6 +144,7 @@ export default {
 				});
 
 				// user must be an object
+
 				let user = {
 					date: el[0][1],
 					morningIn: el.find(a => a[4] == "0"),
@@ -137,6 +152,22 @@ export default {
 					noonIn: el.find(a => a[4] == "3"),
 					noonOut: el.find(a => a[4] == "2")
 				};
+
+				if (user.morningIn) {
+					user.morningIn = user.morningIn[2];
+				}
+
+				if (user.morningOut) {
+					user.morningOut = user.morningOut[2];
+				}
+
+				if (user.noonIn) {
+					user.noonIn = user.noonIn[2];
+				}
+
+				if (user.noonOut) {
+					user.noonOut = user.noonOut[2];
+				}
 
 				ins.push(user);
 			});
@@ -179,12 +210,20 @@ export default {
 
 <style>
 body {
-	background: #f0f0f0;
+	/* background: #f0f0f0; */
+}
+
+.chooseFile button {
+	background-color: #2196f3;
+	border: none; /* Remove borders */
+	color: #000; /* Add a text color */
+	/* padding: 14px 28px; Add some padding */
+	cursor: pointer; /* Add a pointer cursor on mouse-over */
 }
 
 textarea {
 	margin-top: 10px;
-	margin-left: 50px;
+	/* margin-left: 50px; */
 	background: none repeat scroll 0 0 #000;
 	border-color: -moz-use-text-color #ffffff #ffffff -moz-use-text-color;
 	border-radius: 6px 6px 6px 6px;
@@ -197,5 +236,49 @@ textarea {
 	line-height: 1.4em;
 	padding: 5px 8px;
 	/* transition: background-color 0.2s ease 0s; */
+}
+
+.upload_label {
+	display: inline-block;
+	border: none; /* Remove borders */
+	color: white;
+	padding: 10px 28px; /* Add some padding */
+	cursor: pointer; /* Add a pointer cursor on mouse-over */
+	background-color: #2196f3;
+}
+
+button {
+	font-size: 14px;
+	border: none; /* Remove borders */
+	color: white; /* Add a text color */
+	padding: 14px 28px; /* Add some padding */
+	cursor: pointer; /* Add a pointer cursor on mouse-over */
+	margin: 0 5px;
+	background-color: #e7e7e7;
+}
+
+.upload_label:hover {
+	background: #0b7dda;
+}
+
+.success {
+	background-color: #4caf50;
+} /* Green */
+.success:hover {
+	background-color: #46a049;
+}
+
+.warning {
+	background-color: #ff9800;
+} /* Orange */
+.warning:hover {
+	background: #e68a00;
+}
+
+.danger {
+	background-color: #f44336;
+} /* Red */
+.danger:hover {
+	background: #da190b;
 }
 </style>
