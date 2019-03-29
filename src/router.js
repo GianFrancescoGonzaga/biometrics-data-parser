@@ -13,30 +13,24 @@ export default new Router({
 			name: "home",
 			component: Home
 		},
+		// route level code-splitting
+		// this generates a separate chunk (about.[hash].js) for this route
+		// which is lazy-loaded when the route is visited.
 		{
 			path: "/edit",
 			name: "edit",
-			// route level code-splitting
-			// this generates a separate chunk (about.[hash].js) for this route
-			// which is lazy-loaded when the route is visited.
 			component: () =>
 				import(/* webpackChunkName: "about" */ "./views/Edit.vue")
 		},
 		{
 			path: "/recent",
 			name: "recent",
-			// route level code-splitting
-			// this generates a separate chunk (about.[hash].js) for this route
-			// which is lazy-loaded when the route is visited.
 			component: () =>
 				import(/* webpackChunkName: "about" */ "./views/Recent.vue")
 		},
 		{
 			path: "/dtr",
 			name: "dtr",
-			// route level code-splitting
-			// this generates a separate chunk (about.[hash].js) for this route
-			// which is lazy-loaded when the route is visited.
 			component: () =>
 				import(/* webpackChunkName: "about" */ "./views/DTR.vue")
 		}
